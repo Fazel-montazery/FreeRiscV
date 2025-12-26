@@ -1,4 +1,4 @@
-SRC := src/main.c
+SRC := src/main.c src/cpu.c src/fs.c
 CC := gcc
 TARGET := frv
 FLAGS_RELEASE := -Wall -O2 -std=c99
