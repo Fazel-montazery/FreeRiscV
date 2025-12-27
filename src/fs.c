@@ -22,5 +22,6 @@ int64_t readFileToBuf(const char* path, uint8_t* buf, const size_t bufsize, cons
 
 	if (!bin) buf[read_len] = '\0';
 	
+	fclose(file);
 	return read_len;
 }
