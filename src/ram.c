@@ -1,37 +1,37 @@
 #include "ram.h"
 
-struct RAM newRam(const uint64_t size)
+struct FrvRAM frvNewRam(const uint64_t size)
 {
 	uint8_t* bytes = malloc(sizeof(uint8_t) * size);
-	if (!bytes) fprintf(stderr, "Failed to create a new RAM with size %lu: %s\n", size, strerror(errno));
-	return (struct RAM) {
+	if (!bytes) fprintf(stderr, "Failed to create a new FrvRAM with size %lu: %s\n", size, strerror(errno));
+	return (struct FrvRAM) {
 		.bytes = bytes,
 		.size = size
 	};
 }
 
-bool isRamValid(const struct RAM* const ram)
+bool frvIsRamValid(const struct FrvRAM* const ram)
 {
 	return (ram->bytes != NULL);
 }
 
-void ramDestroy(struct RAM* ram)
+void frvRamDestroy(struct FrvRAM* ram)
 {
 	free(ram->bytes);
 }
 
-static inline uint64_t ramLoad8(const struct RAM* const ram, const uint64_t addr)
+static inline uint64_t frvRamLoad8(const struct FrvRAM* const ram, const uint64_t addr)
 {
 	return ram->bytes[addr];
 }
 
-static inline uint64_t ramLoad16(const struct RAM* const ram, const uint64_t addr)
+static inline uint64_t frvRamLoad16(const struct FrvRAM* const ram, const uint64_t addr)
 {
 	return ((uint64_t)(ram->bytes[addr])) | 
 	       (((uint64_t)(ram->bytes[addr + 1])) << 8);
 }
 
-static inline uint64_t ramLoad32(const struct RAM* const ram, const uint64_t addr)
+static inline uint64_t frvRamLoad32(const struct FrvRAM* const ram, const uint64_t addr)
 {
 	return ((uint64_t)(ram->bytes[addr]))		  | 
 	       (((uint64_t)(ram->bytes[addr + 1])) << 8)  |
@@ -39,7 +39,7 @@ static inline uint64_t ramLoad32(const struct RAM* const ram, const uint64_t add
 	       (((uint64_t)(ram->bytes[addr + 3])) << 24);
 }
 
-static inline uint64_t ramLoad64(const struct RAM* const ram, const uint64_t addr)
+static inline uint64_t frvRamLoad64(const struct FrvRAM* const ram, const uint64_t addr)
 {
 	return ((uint64_t)(ram->bytes[addr]))		  | 
 	       (((uint64_t)(ram->bytes[addr + 1])) << 8)  |
@@ -51,18 +51,18 @@ static inline uint64_t ramLoad64(const struct RAM* const ram, const uint64_t add
 	       (((uint64_t)(ram->bytes[addr + 7])) << 56);
 }
 
-static inline void ramStore8(struct RAM* ram, const uint64_t addr, const uint64_t val)
+static inline void frvRamStore8(struct FrvRAM* ram, const uint64_t addr, const uint64_t val)
 {
 	ram->bytes[addr] = val & 0xFF;
 }
 
-static inline void ramStore16(struct RAM* ram, const uint64_t addr, const uint64_t val)
+static inline void frvRamStore16(struct FrvRAM* ram, const uint64_t addr, const uint64_t val)
 {
 	ram->bytes[addr] = (uint8_t)(val & 0xFF);
 	ram->bytes[addr + 1] = (uint8_t)((val >> 8) & 0xFF);
 }
 
-static inline void ramStore32(struct RAM* ram, const uint64_t addr, const uint64_t val)
+static inline void frvRamStore32(struct FrvRAM* ram, const uint64_t addr, const uint64_t val)
 {
 	ram->bytes[addr] = (uint8_t)(val & 0xFF);
 	ram->bytes[addr + 1] = (uint8_t)((val >> 8) & 0xFF);
@@ -70,7 +70,7 @@ static inline void ramStore32(struct RAM* ram, const uint64_t addr, const uint64
 	ram->bytes[addr + 3] = (uint8_t)((val >> 24) & 0xFF);
 }
 
-static inline void ramStore64(struct RAM* ram, const uint64_t addr, const uint64_t val)
+static inline void frvRamStore64(struct FrvRAM* ram, const uint64_t addr, const uint64_t val)
 {
 	ram->bytes[addr] = (uint8_t)(val & 0xFF);
 	ram->bytes[addr + 1] = (uint8_t)((val >> 8) & 0xFF);
@@ -82,9 +82,9 @@ static inline void ramStore64(struct RAM* ram, const uint64_t addr, const uint64
 	ram->bytes[addr + 7] = (uint8_t)((val >> 56) & 0xFF);
 }
 
-bool ramLoad(const struct RAM* const ram, uint64_t addr, const uint64_t size, uint64_t* dest)
+bool frvRamLoad(const struct FrvRAM* const ram, uint64_t addr, const uint64_t size, uint64_t* dest)
 {
-	addr -= RAM_BASE_ADDR;
+	addr -= FRV_RAM_BASE_ADDR;
 
 	if (addr + size > ram->size) {
 		fprintf(stderr, "Ram load failed: Out of range Address\n");
@@ -93,16 +93,16 @@ bool ramLoad(const struct RAM* const ram, uint64_t addr, const uint64_t size, ui
 
 	switch (size) {
 		case 1:
-			*dest = ramLoad8(ram, addr);
+			*dest = frvRamLoad8(ram, addr);
 			break;
 		case 2:
-			*dest = ramLoad16(ram, addr);
+			*dest = frvRamLoad16(ram, addr);
 			break;
 		case 4:
-			*dest = ramLoad32(ram, addr);
+			*dest = frvRamLoad32(ram, addr);
 			break;
 		case 8:
-			*dest = ramLoad64(ram, addr);
+			*dest = frvRamLoad64(ram, addr);
 			break;
 
 		default:
@@ -112,9 +112,9 @@ bool ramLoad(const struct RAM* const ram, uint64_t addr, const uint64_t size, ui
 	return true;
 }
 
-bool ramStore(struct RAM* ram, uint64_t addr, const uint64_t size, const uint64_t val)
+bool frvRamStore(struct FrvRAM* ram, uint64_t addr, const uint64_t size, const uint64_t val)
 {
-	addr -= RAM_BASE_ADDR;
+	addr -= FRV_RAM_BASE_ADDR;
 
 	if (addr + size > ram->size) {
 		fprintf(stderr, "Ram store failed: Out of range Address\n");
@@ -123,16 +123,16 @@ bool ramStore(struct RAM* ram, uint64_t addr, const uint64_t size, const uint64_
 
 	switch (size) {
 		case 1:
-			ramStore8(ram, addr, val);
+			frvRamStore8(ram, addr, val);
 			break;
 		case 2:
-			ramStore16(ram, addr, val);
+			frvRamStore16(ram, addr, val);
 			break;
 		case 4:
-			ramStore32(ram, addr, val);
+			frvRamStore32(ram, addr, val);
 			break;
 		case 8:
-			ramStore64(ram, addr, val);
+			frvRamStore64(ram, addr, val);
 			break;
 
 		default:
@@ -142,9 +142,9 @@ bool ramStore(struct RAM* ram, uint64_t addr, const uint64_t size, const uint64_
 	return true;
 }
 
-bool ramLoadInst(struct RAM* ram, uint64_t addr, uint32_t* dest)
+bool frvRamLoadInst(struct FrvRAM* ram, uint64_t addr, uint32_t* dest)
 {
-	addr -= RAM_BASE_ADDR;
+	addr -= FRV_RAM_BASE_ADDR;
 
 	if (addr + 4 > ram->size) {
 		fprintf(stderr, "Ram Load instruction failed: Out of range Address\n");

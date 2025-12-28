@@ -15,4 +15,4 @@
  * Return the size of the file if (buf == NULL)
  * Return the bytes read on success
  */
-int64_t readFileToBuf(const char* path, uint8_t* buf, const size_t bufsize, const bool bin);
+int64_t frvReadFileToBuf(const char* path, uint8_t* buf, const size_t bufsize, const bool bin);

@@ -1,6 +1,6 @@
 #include "fs.h"
 
-int64_t readFileToBuf(const char* path, uint8_t* buf, const size_t bufsize, const bool bin)
+int64_t frvReadFileToBuf(const char* path, uint8_t* buf, const size_t bufsize, const bool bin)
 {
 	struct stat sb;
 	if (stat(path, &sb) == -1) {

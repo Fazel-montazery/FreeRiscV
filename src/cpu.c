@@ -1,7 +1,7 @@
 #include "cpu.h"
 
 // Create a unique cose for each instruction
-static uint32_t cpuInstCode(const uint32_t inst)
+static uint32_t frvCpuInstCode(const uint32_t inst)
 {
 	const uint32_t opcode = INST_OPCODE(inst);
 	const uint32_t funct3 = INST_FUNCT3(inst);
@@ -24,7 +24,7 @@ static uint32_t cpuInstCode(const uint32_t inst)
 	}
 }
 
-void cpuPrintRegs(struct CPU* cpu)
+void frvCpuPrintRegs(struct FrvCPU* cpu)
 {
 	printf("PC => 0x%lX | %ld\n", cpu->pc, cpu->pc);
 	for (int i = 0; i < NUM_REGS; i++) {
@@ -32,22 +32,22 @@ void cpuPrintRegs(struct CPU* cpu)
 	}
 }
 
-struct CPU newCpu(struct BUS* bus)
+struct FrvCPU frvNewCpu(struct FrvBUS* bus)
 {
-	struct CPU cpu = { 0 };
+	struct FrvCPU cpu = { 0 };
 	cpu.regs[0] = 0; // x0 hard wired to zero
-	cpu.regs[2] = bus->ram->size + RAM_BASE_ADDR; // x2 stack pointer
-	cpu.pc = RAM_BASE_ADDR; // Program-couter
+	cpu.regs[2] = bus->ram->size + FRV_RAM_BASE_ADDR; // x2 stack pointer
+	cpu.pc = FRV_RAM_BASE_ADDR; // Program-couter
 	cpu.bus = bus;
 	return cpu;
 }
 
-bool cpuLoadProgram(struct CPU* cpu, const char* path)
+bool frvCpuLoadProgram(struct FrvCPU* cpu, const char* path)
 {
 	int64_t read_bytes;
 	int64_t file_size;
-	if ((file_size = readFileToBuf(path, NULL, 0, true)) < 0) return false;
-	if ((read_bytes = readFileToBuf(path, cpu->bus->ram->bytes , cpu->bus->ram->size, true)) < 0) return false;
+	if ((file_size = frvReadFileToBuf(path, NULL, 0, true)) < 0) return false;
+	if ((read_bytes = frvReadFileToBuf(path, cpu->bus->ram->bytes , cpu->bus->ram->size, true)) < 0) return false;
 	if (read_bytes != file_size) {
 		fprintf(stderr, "Could'nt read program to memory! (Out of mem)\n");
 		return false;
@@ -56,14 +56,14 @@ bool cpuLoadProgram(struct CPU* cpu, const char* path)
 }
 
 // Loading without a bus to avoid mismatch of 32 and 64 bits
-static bool cpuFetch(struct CPU* cpu, uint32_t* inst)
+static bool frvCpuFetch(struct FrvCPU* cpu, uint32_t* inst)
 {
-	return busLoadInst(cpu->bus, cpu->pc, inst);
+	return frvBusLoadInst(cpu->bus, cpu->pc, inst);
 }
 
-static bool cpuExec(struct CPU* cpu, uint32_t inst)
+static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 {
-	uint32_t instcode = cpuInstCode(inst);
+	uint32_t instcode = frvCpuInstCode(inst);
         uint64_t rd = INST_RD(inst);
         uint64_t rs1 = INST_RS1(inst);
         uint64_t rs2 = INST_RS2(inst);
@@ -91,7 +91,7 @@ static bool cpuExec(struct CPU* cpu, uint32_t inst)
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		uint64_t val;
-		if (!busLoad(cpu->bus, addr, 1, &val)) return false;
+		if (!frvBusLoad(cpu->bus, addr, 1, &val)) return false;
 		cpu->regs[rd] = (uint64_t)((int64_t)((int8_t) (val)));
 		return true;
 	}
@@ -100,7 +100,7 @@ static bool cpuExec(struct CPU* cpu, uint32_t inst)
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		uint64_t val;
-		if (!busLoad(cpu->bus, addr, 2, &val)) return false;
+		if (!frvBusLoad(cpu->bus, addr, 2, &val)) return false;
 		cpu->regs[rd] = (uint64_t)((int64_t)((int16_t) (val)));
 		return true;
 	}
@@ -109,7 +109,7 @@ static bool cpuExec(struct CPU* cpu, uint32_t inst)
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		uint64_t val;
-		if (!busLoad(cpu->bus, addr, 4, &val)) return false;
+		if (!frvBusLoad(cpu->bus, addr, 4, &val)) return false;
 		cpu->regs[rd] = (uint64_t)((int64_t)((int32_t) (val)));
 		return true;
 	}
@@ -117,49 +117,49 @@ static bool cpuExec(struct CPU* cpu, uint32_t inst)
 	case INSTCODE_LD: {
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busLoad(cpu->bus, addr, 8, &cpu->regs[rd]);
+		return frvBusLoad(cpu->bus, addr, 8, &cpu->regs[rd]);
 	}
 
 	case INSTCODE_LBU: {
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busLoad(cpu->bus, addr, 1, &cpu->regs[rd]);
+		return frvBusLoad(cpu->bus, addr, 1, &cpu->regs[rd]);
 	}
 
 	case INSTCODE_LHU: {
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busLoad(cpu->bus, addr, 2, &cpu->regs[rd]);
+		return frvBusLoad(cpu->bus, addr, 2, &cpu->regs[rd]);
 	}
 
 	case INSTCODE_LWU: {
 		uint64_t imm = INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busLoad(cpu->bus, addr, 4, &cpu->regs[rd]);
+		return frvBusLoad(cpu->bus, addr, 4, &cpu->regs[rd]);
 	}
 
 	case INSTCODE_SB: {
 		uint64_t imm = INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busStore(cpu->bus, addr, 1, cpu->regs[rs2]);
+		return frvBusStore(cpu->bus, addr, 1, cpu->regs[rs2]);
 	}
 
 	case INSTCODE_SH: {
 		uint64_t imm = INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busStore(cpu->bus, addr, 2, cpu->regs[rs2]);
+		return frvBusStore(cpu->bus, addr, 2, cpu->regs[rs2]);
 	}
 
 	case INSTCODE_SW: {
 		uint64_t imm = INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busStore(cpu->bus, addr, 4, cpu->regs[rs2]);
+		return frvBusStore(cpu->bus, addr, 4, cpu->regs[rs2]);
 	}
 
 	case INSTCODE_SD: {
 		uint64_t imm = INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
-		return busStore(cpu->bus, addr, 8, cpu->regs[rs2]);
+		return frvBusStore(cpu->bus, addr, 8, cpu->regs[rs2]);
 	}
 
 	default:
@@ -167,13 +167,13 @@ static bool cpuExec(struct CPU* cpu, uint32_t inst)
 	}
 }
 
-void cpuRun(struct CPU* cpu)
+void frvCpuRun(struct FrvCPU* cpu)
 {
 	while (true) {
 		uint32_t inst;
-		if(!cpuFetch(cpu, &inst)) break;
+		if(!frvCpuFetch(cpu, &inst)) break;
 		cpu->pc += 4;
-		if(!cpuExec(cpu, inst)) break;
+		if(!frvCpuExec(cpu, inst)) break;
 		if(cpu->pc == 0) break;
 	}
 }

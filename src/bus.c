@@ -1,35 +1,35 @@
 #include "bus.h"
 
-struct BUS newBus(struct RAM* ram)
+struct FrvBUS frvNewBus(struct FrvRAM* ram)
 {
-	return (struct BUS) {
+	return (struct FrvBUS) {
 		.ram = ram
 	};
 }
 
-bool busLoad(const struct BUS* const bus, const uint64_t addr, const uint64_t size, uint64_t* dest)
+bool frvBusLoad(const struct FrvBUS* const bus, const uint64_t addr, const uint64_t size, uint64_t* dest)
 {
-	if (addr < RAM_BASE_ADDR) {
-		fprintf(stderr, "BUS->RAM load failed: illegal access\n");
+	if (addr < FRV_RAM_BASE_ADDR) {
+		fprintf(stderr, "FrvBUS->FrvRAM load failed: illegal access\n");
 		return false;
 	}
-	return ramLoad(bus->ram, addr, size, dest);
+	return frvRamLoad(bus->ram, addr, size, dest);
 }
 
-bool busLoadInst(const struct BUS* const bus, const uint64_t addr, uint32_t* dest)
+bool frvBusLoadInst(const struct FrvBUS* const bus, const uint64_t addr, uint32_t* dest)
 {
-	if (addr < RAM_BASE_ADDR) {
-		fprintf(stderr, "BUS->RAM load failed: illegal access\n");
+	if (addr < FRV_RAM_BASE_ADDR) {
+		fprintf(stderr, "FrvBUS->FrvRAM load failed: illegal access\n");
 		return false;
 	}
-	return ramLoadInst(bus->ram, addr, dest);
+	return frvRamLoadInst(bus->ram, addr, dest);
 }
 
-bool busStore(const struct BUS* const bus, const uint64_t addr, const uint64_t size, const uint64_t val)
+bool frvBusStore(const struct FrvBUS* const bus, const uint64_t addr, const uint64_t size, const uint64_t val)
 {
-	if (addr < RAM_BASE_ADDR) {
-		fprintf(stderr, "BUS->RAM store failed: illegal access\n");
+	if (addr < FRV_RAM_BASE_ADDR) {
+		fprintf(stderr, "FrvBUS->FrvRAM store failed: illegal access\n");
 		return false;
 	}
-	return ramStore(bus->ram, addr, size, val);
+	return frvRamStore(bus->ram, addr, size, val);
 }

@@ -7,20 +7,20 @@
 #include <string.h>
 #include <errno.h>
 
-#define RAM_BASE_ADDR (0x80000000)
+#define FRV_RAM_BASE_ADDR (0x80000000)
 
-struct RAM {
+struct FrvRAM {
 	uint8_t*	bytes;
 	uint64_t	size;
 };
 
-struct RAM newRam(const size_t size);
-bool isRamValid(const struct RAM* const ram);
-void ramDestroy(struct RAM* ram);
+struct FrvRAM frvNewRam(const size_t size);
+bool frvIsRamValid(const struct FrvRAM* const ram);
+void frvRamDestroy(struct FrvRAM* ram);
 
 // Load/Store ops
 // return false on fail otherise true
 // size is in bytes [1,2,4,8]
-bool ramLoad(const struct RAM* const ram, uint64_t addr, const uint64_t size, uint64_t* dest);
-bool ramLoadInst(struct RAM* ram, uint64_t addr, uint32_t* dest); // Load 32-bit instruction
-bool ramStore(struct RAM* ram, uint64_t addr, const uint64_t size, const uint64_t val);
+bool frvRamLoad(const struct FrvRAM* const ram, uint64_t addr, const uint64_t size, uint64_t* dest);
+bool frvRamLoadInst(struct FrvRAM* ram, uint64_t addr, uint32_t* dest); // Load 32-bit instruction
+bool frvRamStore(struct FrvRAM* ram, uint64_t addr, const uint64_t size, const uint64_t val);

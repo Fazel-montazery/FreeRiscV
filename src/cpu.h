@@ -36,13 +36,13 @@
 #define INST_IMM_I(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfff00000)) >> 20))
 #define INST_IMM_S(inst) (((uint64_t) ((int64_t)((int32_t)(inst & 0xfe000000)) >> 20)) | ((inst >> 7) & 0x1f))
 
-struct CPU {
+struct FrvCPU {
 	uint64_t	pc;
 	uint64_t	regs[NUM_REGS];
-	struct BUS*	bus;
+	struct FrvBUS*	bus;
 };
 
-struct CPU newCpu(struct BUS* bus);
-void cpuPrintRegs(struct CPU* cpu); // print registers in hex and decimal
-bool cpuLoadProgram(struct CPU* cpu, const char* path); // load the binary from path into memory
-void cpuRun(struct CPU* cpu); // The main cpu cycle to run the program
+struct FrvCPU frvNewCpu(struct FrvBUS* bus);
+void frvCpuPrintRegs(struct FrvCPU* cpu); // print registers in hex and decimal
+bool frvCpuLoadProgram(struct FrvCPU* cpu, const char* path); // load the binary from path into memory
+void frvCpuRun(struct FrvCPU* cpu); // The main frvCpu cycle to run the program
