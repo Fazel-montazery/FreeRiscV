@@ -26,12 +26,13 @@ void cpuPrintRegs(struct CPU* cpu)
 	}
 }
 
-struct CPU newCpu(void)
+struct CPU newCpu(struct BUS* bus)
 {
 	struct CPU cpu = { 0 };
 	cpu.regs[0] = 0; // x0 hard wired to zero
-	cpu.regs[2] = MEM_SIZE; // x2 stack pointer
-	cpu.pc = 0; // Program-couter
+	cpu.regs[2] = bus->ram->size + RAM_BASE_ADDR; // x2 stack pointer
+	cpu.pc = RAM_BASE_ADDR; // Program-couter
+	cpu.bus = bus;
 	return cpu;
 }
 
@@ -40,7 +41,7 @@ bool cpuLoadProgram(struct CPU* cpu, const char* path)
 	int64_t read_bytes;
 	int64_t file_size;
 	if ((file_size = readFileToBuf(path, NULL, 0, true)) < 0) return false;
-	if ((read_bytes = readFileToBuf(path, cpu->mem, MEM_SIZE, true)) < 0) return false;
+	if ((read_bytes = readFileToBuf(path, cpu->bus->ram->bytes , cpu->bus->ram->size, true)) < 0) return false;
 	if (read_bytes != file_size) {
 		fprintf(stderr, "Could'nt read program to memory! (Out of mem)\n");
 		return false;
@@ -48,13 +49,10 @@ bool cpuLoadProgram(struct CPU* cpu, const char* path)
 	return true;
 }
 
-static uint32_t cpuFetch(struct CPU* cpu)
+// Loading without a bus to avoid mismatch of 32 and 64 bits
+static bool cpuFetch(struct CPU* cpu, uint32_t* inst)
 {
-	size_t i = (size_t) cpu->pc;
-	return (uint32_t)cpu->mem[i]
-		| ((uint32_t)cpu->mem[i+1] << 8)
-		| ((uint32_t)cpu->mem[i+2] << 16)
-		| ((uint32_t)cpu->mem[i+3] << 24);
+	return busLoadInst(cpu->bus, cpu->pc, inst);
 }
 
 static bool cpuExec(struct CPU* cpu, uint32_t inst)
@@ -82,19 +80,19 @@ static bool cpuExec(struct CPU* cpu, uint32_t inst)
 	}
 	
 	default:
-		   return false;
+		return false;
 	}
 
 	return true;
 }
 
-bool cpuRun(struct CPU* cpu)
+void cpuRun(struct CPU* cpu)
 {
 	while (true) {
-		uint32_t inst = cpuFetch(cpu);
+		uint32_t inst;
+		if(!cpuFetch(cpu, &inst)) break;
 		cpu->pc += 4;
-		if(!cpuExec(cpu, inst)) return false;
+		if(!cpuExec(cpu, inst)) break;
+		if(cpu->pc == 0) break;
 	}
-
-	return true;
 }

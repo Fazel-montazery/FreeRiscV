@@ -6,8 +6,9 @@
 
 #include "fs.h"
 
+#include "bus.h"
+
 #define NUM_REGS 32
-#define MEM_SIZE 2048
 
 // RV32I (func7 + func3 + opcode)
 #define INSTCODE_ADD	((0x00 << 10) | (0x0 << 7) | 0x33)
@@ -26,10 +27,10 @@
 struct CPU {
 	uint64_t	pc;
 	uint64_t	regs[NUM_REGS];
-	uint8_t		mem[MEM_SIZE];
+	struct BUS*	bus;
 };
 
-struct CPU newCpu(void);
+struct CPU newCpu(struct BUS* bus);
 void cpuPrintRegs(struct CPU* cpu); // print registers in hex and decimal
-bool cpuLoadProgram(struct CPU* cpu, const char* path); // load the binary from path innto memory
-bool cpuRun(struct CPU* cpu); // The main cpu cycle to run the program
+bool cpuLoadProgram(struct CPU* cpu, const char* path); // load the binary from path into memory
+void cpuRun(struct CPU* cpu); // The main cpu cycle to run the program
