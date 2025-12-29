@@ -8,37 +8,85 @@
 
 #include "bus.h"
 
-#define NUM_REGS 32
+#define FRV_NUM_REGS 32
+#define FRV_NUM_CSRS 4096
 
 // RV32I (func7 + func3 + opcode)
-#define INSTCODE_ADD	((0x00 << 10) | (0x0 << 7) | 0x33) // Arithmetic
-#define INSTCODE_SUB	((0x20 << 10) | (0x0 << 7) | 0x33)
-#define INSTCODE_ADDI	((0x0 << 7) | 0x13)
-#define INSTCODE_LB	((0x0 << 7) | 0x3) // Loads
-#define INSTCODE_LH	((0x1 << 7) | 0x3)
-#define INSTCODE_LW	((0x2 << 7) | 0x3)
-#define INSTCODE_LBU	((0x4 << 7) | 0x3)
-#define INSTCODE_LHU	((0x5 << 7) | 0x3)
-#define INSTCODE_LWU	((0x6 << 7) | 0x3)
-#define INSTCODE_LD	((0x3 << 7) | 0x3)
-#define INSTCODE_SB	((0x0 << 7) | 0x23) // Stores
-#define INSTCODE_SH	((0x1 << 7) | 0x23)
-#define INSTCODE_SW	((0x2 << 7) | 0x23)
-#define INSTCODE_SD	((0x3 << 7) | 0x23)
+#define FRV_INSTCODE_ADD	((0x00 << 10) | (0x0 << 7) | 0x33) // Arithmetic
+#define FRV_INSTCODE_SUB	((0x20 << 10) | (0x0 << 7) | 0x33)
+#define FRV_INSTCODE_ADDI	((0x0 << 7) | 0x13)
+#define FRV_INSTCODE_LB	((0x0 << 7) | 0x3) // Loads
+#define FRV_INSTCODE_LH	((0x1 << 7) | 0x3)
+#define FRV_INSTCODE_LW	((0x2 << 7) | 0x3)
+#define FRV_INSTCODE_LBU	((0x4 << 7) | 0x3)
+#define FRV_INSTCODE_LHU	((0x5 << 7) | 0x3)
+#define FRV_INSTCODE_LWU	((0x6 << 7) | 0x3)
+#define FRV_INSTCODE_LD	((0x3 << 7) | 0x3)
+#define FRV_INSTCODE_SB	((0x0 << 7) | 0x23) // Stores
+#define FRV_INSTCODE_SH	((0x1 << 7) | 0x23)
+#define FRV_INSTCODE_SW	((0x2 << 7) | 0x23)
+#define FRV_INSTCODE_SD	((0x3 << 7) | 0x23)
+
+// Machine-level CSRs
+/// Hardware thread ID
+#define FRV_CSR_MHARTID (0xf14)
+/// Machine status register
+#define FRV_CSR_MSTATUS (0x300)
+/// Machine exception delefation register
+#define FRV_CSR_MEDELEG (0x302)
+/// Machine interrupt delefation register
+#define FRV_CSR_MIDELEG (0x303)
+/// Machine interrupt-enable register
+#define FRV_CSR_MIE (0x304)
+/// Machine trap-handler base address
+#define FRV_CSR_MTVEC (0x305)
+/// Machine counter enable
+#define FRV_CSR_MCOUNTEREN (0x306)
+/// Scratch register for machine trap handlers
+#define FRV_CSR_MSCRATCH (0x340)
+/// Machine exception program counter
+#define FRV_CSR_MEPC (0x341)
+/// Machine trap cause
+#define FRV_CSR_MCAUSE (0x342)
+/// Machine bad address or instruction
+#define FRV_CSR_MTVAL (0x343)
+/// Machine interrupt pending
+#define FRV_CSR_MIP (0x344)
+
+// Supervisor-level CSRs
+/// Supervisor status register
+#define FRV_CSR_SSTATUS (0x100)
+/// Supervisor interrupt-enable register
+#define FRV_CSR_SIE (0x104)
+/// Supervisor trap handler base address
+#define FRV_CSR_STVEC (0x105)
+/// Scratch register for supervisor trap handlers
+#define FRV_CSR_SSCRATCH (0x140)
+/// Supervisor exception program counter
+#define FRV_CSR_SEPC (0x141)
+/// Supervisor trap cause
+#define FRV_CSR_SCAUSE (0x142)
+/// Supervisor bad address or instruction
+#define FRV_CSR_STVAL (0x143)
+/// Supervisor interrupt pending
+#define FRV_CSR_SIP (0x144)
+/// Supervisor address translation and protection
+#define FRV_CSR_SATP (0x180)
 
 // Helpers
-#define INST_OPCODE(inst) (inst & 0x7f)
-#define INST_FUNCT3(inst) ((inst >> 12) & 0x7)
-#define INST_FUNCT7(inst) ((inst >> 25) & 0x7f)
-#define INST_RD(inst) ((size_t) ((inst >> 7) & 0x1f))
-#define INST_RS1(inst) ((size_t) ((inst >> 15) & 0x1f))
-#define INST_RS2(inst) ((size_t) ((inst >> 20) & 0x1f))
-#define INST_IMM_I(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfff00000)) >> 20))
-#define INST_IMM_S(inst) (((uint64_t) ((int64_t)((int32_t)(inst & 0xfe000000)) >> 20)) | ((inst >> 7) & 0x1f))
+#define FRV_INST_OPCODE(inst) (inst & 0x7f)
+#define FRV_INST_FUNCT3(inst) ((inst >> 12) & 0x7)
+#define FRV_INST_FUNCT7(inst) ((inst >> 25) & 0x7f)
+#define FRV_INST_RD(inst) ((size_t) ((inst >> 7) & 0x1f))
+#define FRV_INST_RS1(inst) ((size_t) ((inst >> 15) & 0x1f))
+#define FRV_INST_RS2(inst) ((size_t) ((inst >> 20) & 0x1f))
+#define FRV_INST_IMM_I(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfff00000)) >> 20))
+#define FRV_INST_IMM_S(inst) (((uint64_t) ((int64_t)((int32_t)(inst & 0xfe000000)) >> 20)) | ((inst >> 7) & 0x1f))
 
 struct FrvCPU {
 	uint64_t	pc;
-	uint64_t	regs[NUM_REGS];
+	uint64_t	regs[FRV_NUM_REGS];
+	uint64_t	csrs[FRV_NUM_CSRS];
 	struct FrvBUS*	bus;
 };
 

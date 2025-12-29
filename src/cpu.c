@@ -3,9 +3,9 @@
 // Create a unique cose for each instruction
 static uint32_t frvCpuInstCode(const uint32_t inst)
 {
-	const uint32_t opcode = INST_OPCODE(inst);
-	const uint32_t funct3 = INST_FUNCT3(inst);
-	const uint32_t funct7 = INST_FUNCT7(inst);
+	const uint32_t opcode = FRV_INST_OPCODE(inst);
+	const uint32_t funct3 = FRV_INST_FUNCT3(inst);
+	const uint32_t funct7 = FRV_INST_FUNCT7(inst);
 	switch (opcode) {
 		case 0x33: // R-type
 			return (funct7 << 10) | (funct3 << 7) | opcode;
@@ -27,7 +27,7 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 void frvCpuPrintRegs(struct FrvCPU* cpu)
 {
 	printf("PC => 0x%lX | %ld\n", cpu->pc, cpu->pc);
-	for (int i = 0; i < NUM_REGS; i++) {
+	for (int i = 0; i < FRV_NUM_REGS; i++) {
 		printf("x%d => 0x%lX | %ld\n", i, cpu->regs[i], cpu->regs[i]);
 	}
 }
@@ -64,31 +64,31 @@ static bool frvCpuFetch(struct FrvCPU* cpu, uint32_t* inst)
 static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 {
 	uint32_t instcode = frvCpuInstCode(inst);
-        uint64_t rd = INST_RD(inst);
-        uint64_t rs1 = INST_RS1(inst);
-        uint64_t rs2 = INST_RS2(inst);
+        uint64_t rd = FRV_INST_RD(inst);
+        uint64_t rs1 = FRV_INST_RS1(inst);
+        uint64_t rs2 = FRV_INST_RS2(inst);
 
 	switch (instcode) {
 	// Arithmetic
-	case INSTCODE_ADD: {
+	case FRV_INSTCODE_ADD: {
 		cpu->regs[rd] = cpu->regs[rs1] + cpu->regs[rs2];
 		return true;
 	}
 
-	case INSTCODE_SUB: {
+	case FRV_INSTCODE_SUB: {
 		cpu->regs[rd] = cpu->regs[rs1] - cpu->regs[rs2];
 		return true;
 	}
 
-	case INSTCODE_ADDI: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_ADDI: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		cpu->regs[rd] = cpu->regs[rs1] + imm;
 		return true;
 	}
 	
 	// Loads
-	case INSTCODE_LB: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LB: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		uint64_t val;
 		if (!frvBusLoad(cpu->bus, addr, 1, &val)) return false;
@@ -96,8 +96,8 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		return true;
 	}
 
-	case INSTCODE_LH: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LH: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		uint64_t val;
 		if (!frvBusLoad(cpu->bus, addr, 2, &val)) return false;
@@ -105,8 +105,8 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		return true;
 	}
 
-	case INSTCODE_LW: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LW: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		uint64_t val;
 		if (!frvBusLoad(cpu->bus, addr, 4, &val)) return false;
@@ -114,50 +114,50 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		return true;
 	}
 
-	case INSTCODE_LD: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LD: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusLoad(cpu->bus, addr, 8, &cpu->regs[rd]);
 	}
 
-	case INSTCODE_LBU: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LBU: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusLoad(cpu->bus, addr, 1, &cpu->regs[rd]);
 	}
 
-	case INSTCODE_LHU: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LHU: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusLoad(cpu->bus, addr, 2, &cpu->regs[rd]);
 	}
 
-	case INSTCODE_LWU: {
-		uint64_t imm = INST_IMM_I(inst);
+	case FRV_INSTCODE_LWU: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusLoad(cpu->bus, addr, 4, &cpu->regs[rd]);
 	}
 
-	case INSTCODE_SB: {
-		uint64_t imm = INST_IMM_S(inst);
+	case FRV_INSTCODE_SB: {
+		uint64_t imm = FRV_INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusStore(cpu->bus, addr, 1, cpu->regs[rs2]);
 	}
 
-	case INSTCODE_SH: {
-		uint64_t imm = INST_IMM_S(inst);
+	case FRV_INSTCODE_SH: {
+		uint64_t imm = FRV_INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusStore(cpu->bus, addr, 2, cpu->regs[rs2]);
 	}
 
-	case INSTCODE_SW: {
-		uint64_t imm = INST_IMM_S(inst);
+	case FRV_INSTCODE_SW: {
+		uint64_t imm = FRV_INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusStore(cpu->bus, addr, 4, cpu->regs[rs2]);
 	}
 
-	case INSTCODE_SD: {
-		uint64_t imm = INST_IMM_S(inst);
+	case FRV_INSTCODE_SD: {
+		uint64_t imm = FRV_INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
 		return frvBusStore(cpu->bus, addr, 8, cpu->regs[rs2]);
 	}
