@@ -1,8 +1,12 @@
 main:
-	addi x4, x0, 500
-	addi x5, x0, 90
-	sub x6, x5, x4
-	addi x2, x2, -8
-	sd x6, 0(x2)
-        ld x7, 0(x2)
-	addi x2, x2, 8
+  addi t0, zero, 1
+  addi t1, zero, 2
+  addi t2, zero, 3
+  csrrw zero, mstatus, t0
+  csrrs zero, mtvec, t1
+  csrrw zero, mepc, t2
+  csrrc t2, mepc, zero
+  csrrwi zero, sstatus, 4
+  csrrsi zero, stvec, 5
+  csrrwi zero, sepc, 6
+  csrrci zero, sepc, 0

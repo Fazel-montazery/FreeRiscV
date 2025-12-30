@@ -26,6 +26,7 @@ int main(int argc, char** argv)
 	if (!frvCpuLoadProgram(&cpu, argv[1])) return -1;
 	frvCpuRun(&cpu);
 	frvCpuPrintRegs(&cpu);
+	frvCpuPrintCsrs(&cpu);
 
 	frvRamDestroy(&ram);
 	return 0;

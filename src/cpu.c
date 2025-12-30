@@ -19,17 +19,60 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 		case 0x23: // S-type
 			return (funct3 << 7) | opcode;
 
+		case 0x73: // CSR
+			return (funct3 << 7) | opcode;
+
 		default:
 			return 0xFFFFFFFF;
 	}
 }
 
-void frvCpuPrintRegs(struct FrvCPU* cpu)
+static uint64_t frvLoadCsr(const struct FrvCPU* const cpu, const uint32_t addr) 
+{
+	switch (addr) {
+	case FRV_CSR_SIE:
+		return cpu->csrs[FRV_CSR_MIE] & cpu->csrs[FRV_CSR_MIDELEG];
+
+	default:
+		return cpu->csrs[addr];
+	}
+}
+
+static void frvStoreCsr(struct FrvCPU* cpu, const uint32_t addr, const uint64_t val) 
+{
+	switch (addr) {
+	case FRV_CSR_SIE:
+		cpu->csrs[FRV_CSR_MIE] = (cpu->csrs[FRV_CSR_MIE] &
+				!cpu->csrs[FRV_CSR_MIDELEG]) | (val & cpu->csrs[FRV_CSR_MIDELEG]);
+
+	default:
+		cpu->csrs[addr] = val;
+	}
+}
+
+void frvCpuPrintRegs(const struct FrvCPU* const cpu)
 {
 	printf("PC => 0x%lX | %ld\n", cpu->pc, cpu->pc);
 	for (int i = 0; i < FRV_NUM_REGS; i++) {
 		printf("x%d => 0x%lX | %ld\n", i, cpu->regs[i], cpu->regs[i]);
 	}
+}
+
+void frvCpuPrintCsrs(const struct FrvCPU* const cpu)
+{
+	printf("mstatus=0x%lX\tmtvec=0x%lX\tmepc=0x%lX\tmcause=0x%lX\n",
+                frvLoadCsr(cpu, FRV_CSR_MSTATUS),
+                frvLoadCsr(cpu, FRV_CSR_MTVEC),
+                frvLoadCsr(cpu, FRV_CSR_MEPC),
+                frvLoadCsr(cpu, FRV_CSR_MCAUSE)
+        );
+
+	printf("sstatus=0x%lX\tstvec=0x%lX\tsepc=0x%lX\tscause=0x%lX\n",
+                frvLoadCsr(cpu, FRV_CSR_SSTATUS),
+                frvLoadCsr(cpu, FRV_CSR_STVEC),
+                frvLoadCsr(cpu, FRV_CSR_SEPC),
+                frvLoadCsr(cpu, FRV_CSR_SCAUSE)
+        );
 }
 
 struct FrvCPU frvNewCpu(struct FrvBUS* bus)
@@ -67,6 +110,7 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
         uint64_t rd = FRV_INST_RD(inst);
         uint64_t rs1 = FRV_INST_RS1(inst);
         uint64_t rs2 = FRV_INST_RS2(inst);
+	uint32_t csr = FRV_INST_CSR_CODE(inst);
 
 	switch (instcode) {
 	// Arithmetic
@@ -138,6 +182,7 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		return frvBusLoad(cpu->bus, addr, 4, &cpu->regs[rd]);
 	}
 
+	// Stores
 	case FRV_INSTCODE_SB: {
 		uint64_t imm = FRV_INST_IMM_S(inst);
 		uint64_t addr = cpu->regs[rs1] + imm;
@@ -162,6 +207,43 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		return frvBusStore(cpu->bus, addr, 8, cpu->regs[rs2]);
 	}
 
+	// CSRs
+	case FRV_INSTCODE_CSRRW: {
+		cpu->regs[rd] = frvLoadCsr(cpu, csr);
+		frvStoreCsr(cpu, csr, cpu->regs[rs1]);
+		return true;
+	}
+
+	case FRV_INSTCODE_CSRRS: {
+		cpu->regs[rd] = frvLoadCsr(cpu, csr);
+		frvStoreCsr(cpu, csr, cpu->regs[rs1] | cpu->regs[rd]);
+		return true;
+	}
+
+	case FRV_INSTCODE_CSRRC: {
+		cpu->regs[rd] = frvLoadCsr(cpu, csr);
+		frvStoreCsr(cpu, csr, (~cpu->regs[rs1]) & cpu->regs[rd]);
+		return true;
+	}
+
+	case FRV_INSTCODE_CSRRWI: {
+		cpu->regs[rd] = frvLoadCsr(cpu, csr);
+		frvStoreCsr(cpu, csr, rs1); // Rs1 is the same as imm here
+		return true;
+	}
+
+	case FRV_INSTCODE_CSRRSI: {
+		cpu->regs[rd] = frvLoadCsr(cpu, csr);
+		frvStoreCsr(cpu, csr, rs1 | cpu->regs[rd]); // Rs1 is the same as imm here
+		return true;
+	}
+
+	case FRV_INSTCODE_CSRRCI: {
+		cpu->regs[rd] = frvLoadCsr(cpu, csr);
+		frvStoreCsr(cpu, csr, (~rs1) & cpu->regs[rd]); // Rs1 is the same as imm here
+		return true;
+	}
+
 	default:
 		return false;
 	}
@@ -173,6 +255,7 @@ void frvCpuRun(struct FrvCPU* cpu)
 		uint32_t inst;
 		if(!frvCpuFetch(cpu, &inst)) break;
 		cpu->pc += 4;
+		cpu->regs[0] = 0; // always Hardwire x0 to 0
 		if(!frvCpuExec(cpu, inst)) break;
 		if(cpu->pc == 0) break;
 	}
