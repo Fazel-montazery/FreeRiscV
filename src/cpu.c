@@ -5,16 +5,27 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 {
 	const uint32_t opcode = FRV_INST_OPCODE(inst);
 	const uint32_t funct3 = FRV_INST_FUNCT3(inst);
+	const uint32_t funct6 = FRV_INST_FUNCT6(inst);
 	const uint32_t funct7 = FRV_INST_FUNCT7(inst);
 	switch (opcode) {
 		case 0x33: // R-type
 			return (funct7 << 10) | (funct3 << 7) | opcode;
 
 		case 0x13: // I-type
-			return (funct3 << 7) | opcode;
+			switch (funct3) {
+				case 0x1:
+				case 0x5:
+					return (funct6 << 10)| (funct3 << 7) | opcode;
+				default:
+					return (funct3 << 7) | opcode;
+			}
 
 		case 0x3: // I-type(Load)
 			return (funct3 << 7) | opcode;
+
+		case 0x37: // U-type
+		case 0x17:
+			return opcode;
 
 		case 0x23: // S-type
 			return (funct3 << 7) | opcode;
@@ -129,7 +140,54 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		cpu->regs[rd] = cpu->regs[rs1] + imm;
 		return true;
 	}
+
+	// Logic
+	case FRV_INSTCODE_ANDI: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
+		cpu->regs[rd] = cpu->regs[rs1] & imm;
+		return true;
+	}
+
+	case FRV_INSTCODE_ORI: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
+		cpu->regs[rd] = cpu->regs[rs1] | imm;
+		return true;
+	}
+
+	case FRV_INSTCODE_XORI: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
+		cpu->regs[rd] = cpu->regs[rs1] ^ imm;
+		return true;
+	}
+
+	case FRV_INSTCODE_SLLI: {
+		cpu->regs[rd] = cpu->regs[rs1] << FRV_INST_SHAMT(inst);
+		return true;
+	}
+
+	case FRV_INSTCODE_SRLI: {
+		cpu->regs[rd] = cpu->regs[rs1] >> FRV_INST_SHAMT(inst);
+		return true;
+	}
+
+	case FRV_INSTCODE_SRAI: {
+		cpu->regs[rd] = ((int64_t)cpu->regs[rs1]) >> FRV_INST_SHAMT(inst);
+		return true;
+	}
 	
+	// Conditionals
+	case FRV_INSTCODE_SLTI: {
+		int64_t imm = FRV_INST_IMM_I(inst);
+		cpu->regs[rd] = (((int64_t)(cpu->regs[rs1])) < imm) ? 1 : 0;
+		return true;
+	}
+
+	case FRV_INSTCODE_SLTIU: {
+		uint64_t imm = FRV_INST_IMM_I(inst);
+		cpu->regs[rd] = ((cpu->regs[rs1]) < imm) ? 1 : 0;
+		return true;
+	}
+
 	// Loads
 	case FRV_INSTCODE_LB: {
 		uint64_t imm = FRV_INST_IMM_I(inst);
@@ -207,6 +265,17 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		return frvBusStore(cpu->bus, addr, 8, cpu->regs[rs2]);
 	}
 
+	// Upper immidiate
+	case FRV_INSTCODE_LUI: {
+		cpu->regs[rd] = FRV_INST_IMM_U(inst);
+		return true;
+	}
+
+	case FRV_INSTCODE_AUIPC: {
+		cpu->regs[rd] = cpu->pc + FRV_INST_IMM_U(inst);
+		return true;
+	}
+
 	// CSRs
 	case FRV_INSTCODE_CSRRW: {
 		cpu->regs[rd] = frvLoadCsr(cpu, csr);
@@ -254,9 +323,9 @@ void frvCpuRun(struct FrvCPU* cpu)
 	while (true) {
 		uint32_t inst;
 		if(!frvCpuFetch(cpu, &inst)) break;
-		cpu->pc += 4;
 		cpu->regs[0] = 0; // always Hardwire x0 to 0
 		if(!frvCpuExec(cpu, inst)) break;
+		cpu->pc += 4;
 		if(cpu->pc == 0) break;
 	}
 }

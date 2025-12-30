@@ -15,6 +15,14 @@
 #define FRV_INSTCODE_ADD	((0x00 << 10) | (0x0 << 7) | 0x33) // Arithmetic
 #define FRV_INSTCODE_SUB	((0x20 << 10) | (0x0 << 7) | 0x33)
 #define FRV_INSTCODE_ADDI	((0x0 << 7) | 0x13)
+#define FRV_INSTCODE_ANDI	((0x7 << 7) | 0x13) // Logic
+#define FRV_INSTCODE_ORI	((0x6 << 7) | 0x13)
+#define FRV_INSTCODE_XORI	((0x4 << 7) | 0x13)
+#define FRV_INSTCODE_SLLI	((0x0 << 10) | (0x1 << 7) | 0x13)
+#define FRV_INSTCODE_SRLI	((0x0 << 10) | (0x5 << 7) | 0x13)
+#define FRV_INSTCODE_SRAI	((0x10 << 10) | (0x5 << 7) | 0x13)
+#define FRV_INSTCODE_SLTI	((0x2 << 7) | 0x13) // Conditionals
+#define FRV_INSTCODE_SLTIU	((0x3 << 7) | 0x13)
 #define FRV_INSTCODE_LB		((0x0 << 7) | 0x3) // Loads
 #define FRV_INSTCODE_LH		((0x1 << 7) | 0x3)
 #define FRV_INSTCODE_LW		((0x2 << 7) | 0x3)
@@ -26,6 +34,8 @@
 #define FRV_INSTCODE_SH		((0x1 << 7) | 0x23)
 #define FRV_INSTCODE_SW		((0x2 << 7) | 0x23)
 #define FRV_INSTCODE_SD		((0x3 << 7) | 0x23)
+#define FRV_INSTCODE_LUI	(0x37) // Upper immidiate
+#define FRV_INSTCODE_AUIPC	(0x17)
 #define FRV_INSTCODE_CSRRW	((0x1 << 7) | 0x73) // Csrs
 #define FRV_INSTCODE_CSRRS	((0x2 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRC	((0x3 << 7) | 0x73)
@@ -84,12 +94,15 @@
 #define FRV_INST_CSR_CODE(inst) ((inst >> 20) & 0xfff)
 #define FRV_INST_FUNCT3(inst) ((inst >> 12) & 0x7)
 #define FRV_INST_FUNCT7(inst) ((inst >> 25) & 0x7f)
+#define FRV_INST_FUNCT6(inst) ((inst >> 26) & 0x3f)
 #define FRV_INST_RD(inst) ((size_t) ((inst >> 7) & 0x1f))
 #define FRV_INST_RS1(inst) ((size_t) ((inst >> 15) & 0x1f))
 #define FRV_INST_RS2(inst) ((size_t) ((inst >> 20) & 0x1f))
 #define FRV_INST_IMM_I(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfff00000)) >> 20))
 #define FRV_INST_IMM_S(inst) (((uint64_t) ((int64_t)((int32_t)(inst & 0xfe000000)) >> 20)) | ((inst >> 7) & 0x1f))
+#define FRV_INST_IMM_U(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfffff000))))
 #define FRV_INST_IMM_CSR(inst) ((uint64_t)((inst >> 15) & 0x1f))
+#define FRV_INST_SHAMT(inst) ((inst >> 20) & 0x3f)
 
 struct FrvCPU {
 	uint64_t	pc;
