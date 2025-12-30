@@ -20,17 +20,15 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 					return (funct3 << 7) | opcode;
 			}
 
-		case 0x3: // I-type(Load)
-			return (funct3 << 7) | opcode;
-
-		case 0x37: // U-type
+		case 0x37: // U-type, J-type
 		case 0x17:
+		case 0x6f:
 			return opcode;
 
-		case 0x23: // S-type
-			return (funct3 << 7) | opcode;
-
-		case 0x73: // CSR
+		case 0x23: // S-type, B-type, I-type(Load), CSR
+		case 0x73:
+		case 0x63:
+		case 0x3:
 			return (funct3 << 7) | opcode;
 
 		default:
@@ -174,8 +172,38 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		cpu->regs[rd] = ((int64_t)cpu->regs[rs1]) >> FRV_INST_SHAMT(inst);
 		return true;
 	}
+
+	case FRV_INSTCODE_AND: {
+		cpu->regs[rd] = cpu->regs[rs1] & cpu->regs[rs2];
+		return true;
+	}
+
+	case FRV_INSTCODE_OR: {
+		cpu->regs[rd] = cpu->regs[rs1] | cpu->regs[rs2];
+		return true;
+	}
+
+	case FRV_INSTCODE_XOR: {
+		cpu->regs[rd] = cpu->regs[rs1] ^ cpu->regs[rs2];
+		return true;
+	}
+
+	case FRV_INSTCODE_SLL: {
+		cpu->regs[rd] = cpu->regs[rs1] << (cpu->regs[rs2] & 0x3f);
+		return true;
+	}
+
+	case FRV_INSTCODE_SRL: {
+		cpu->regs[rd] = cpu->regs[rs1] >> (cpu->regs[rs2] & 0x3f);
+		return true;
+	}
+
+	case FRV_INSTCODE_SRA: {
+		cpu->regs[rd] = ((int64_t)cpu->regs[rs1]) >> (cpu->regs[rs2] & 0x3f);
+		return true;
+	}
 	
-	// Conditionals
+	// Compares
 	case FRV_INSTCODE_SLTI: {
 		int64_t imm = FRV_INST_IMM_I(inst);
 		cpu->regs[rd] = (((int64_t)(cpu->regs[rs1])) < imm) ? 1 : 0;
@@ -185,6 +213,16 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 	case FRV_INSTCODE_SLTIU: {
 		uint64_t imm = FRV_INST_IMM_I(inst);
 		cpu->regs[rd] = ((cpu->regs[rs1]) < imm) ? 1 : 0;
+		return true;
+	}
+
+	case FRV_INSTCODE_SLT: {
+		cpu->regs[rd] = (((int64_t)cpu->regs[rs1]) < ((int64_t)(cpu->regs[rs2]))) ? 1 : 0;
+		return true;
+	}
+
+	case FRV_INSTCODE_SLTU: {
+		cpu->regs[rd] = (cpu->regs[rs1] < cpu->regs[rs2]) ? 1 : 0;
 		return true;
 	}
 
@@ -272,9 +310,68 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 	}
 
 	case FRV_INSTCODE_AUIPC: {
-		cpu->regs[rd] = cpu->pc + FRV_INST_IMM_U(inst);
+		cpu->regs[rd] = cpu->pc + FRV_INST_IMM_U(inst) - 4;
 		return true;
 	}
+
+	// Jumps
+	case FRV_INSTCODE_JAL: {
+		cpu->regs[rd] = cpu->pc;
+		uint64_t imm = FRV_INST_IMM_J(inst);
+		cpu->pc += imm - 4;
+		return true;
+        }
+
+	case FRV_INSTCODE_JALR: {
+		uint64_t tmp = cpu->pc;
+		uint64_t imm = FRV_INST_IMM_I(inst);
+                cpu->pc = (cpu->regs[rs1] + imm) & (~1);
+                cpu->regs[rd] = tmp;
+		return true;
+        }
+
+	// Branch
+	case FRV_INSTCODE_BEQ: {
+		uint64_t imm = FRV_INST_IMM_B(inst);
+		if (cpu->regs[rs1] == cpu->regs[rs2])
+                            cpu->pc += imm - 4;
+		return true;
+        }
+	
+	case FRV_INSTCODE_BNE: {
+		uint64_t imm = FRV_INST_IMM_B(inst);
+		if (cpu->regs[rs1] != cpu->regs[rs2])
+                            cpu->pc += imm - 4;
+		return true;
+        }
+
+	case FRV_INSTCODE_BLT: {
+		uint64_t imm = FRV_INST_IMM_B(inst);
+		if (((int64_t)cpu->regs[rs1]) < ((int64_t)cpu->regs[rs2]))
+                            cpu->pc += imm - 4;
+		return true;
+        }
+
+	case FRV_INSTCODE_BLTU: {
+		uint64_t imm = FRV_INST_IMM_B(inst);
+		if (cpu->regs[rs1] < cpu->regs[rs2])
+                            cpu->pc += imm - 4;
+		return true;
+        }
+
+	case FRV_INSTCODE_BGE: {
+		uint64_t imm = FRV_INST_IMM_B(inst);
+		if (((int64_t)cpu->regs[rs1]) >= ((int64_t)cpu->regs[rs2]))
+                            cpu->pc += imm - 4;
+		return true;
+        }
+
+	case FRV_INSTCODE_BGEU: {
+		uint64_t imm = FRV_INST_IMM_B(inst);
+		if (cpu->regs[rs1] >= cpu->regs[rs2])
+                            cpu->pc += imm - 4;
+		return true;
+        }
 
 	// CSRs
 	case FRV_INSTCODE_CSRRW: {
@@ -324,8 +421,8 @@ void frvCpuRun(struct FrvCPU* cpu)
 		uint32_t inst;
 		if(!frvCpuFetch(cpu, &inst)) break;
 		cpu->regs[0] = 0; // always Hardwire x0 to 0
-		if(!frvCpuExec(cpu, inst)) break;
 		cpu->pc += 4;
+		if(!frvCpuExec(cpu, inst)) break;
 		if(cpu->pc == 0) break;
 	}
 }

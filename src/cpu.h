@@ -21,8 +21,16 @@
 #define FRV_INSTCODE_SLLI	((0x0 << 10) | (0x1 << 7) | 0x13)
 #define FRV_INSTCODE_SRLI	((0x0 << 10) | (0x5 << 7) | 0x13)
 #define FRV_INSTCODE_SRAI	((0x10 << 10) | (0x5 << 7) | 0x13)
-#define FRV_INSTCODE_SLTI	((0x2 << 7) | 0x13) // Conditionals
+#define FRV_INSTCODE_AND	((0x0 << 10) | (0x7 << 7) | 0x33)
+#define FRV_INSTCODE_OR		((0x0 << 10) | (0x6 << 7) | 0x33)
+#define FRV_INSTCODE_XOR	((0x0 << 10) | (0x4 << 7) | 0x33)
+#define FRV_INSTCODE_SLL	((0x0 << 10) | (0x1 << 7) | 0x33)
+#define FRV_INSTCODE_SRL	((0x0 << 10) | (0x5 << 7) | 0x33)
+#define FRV_INSTCODE_SRA	((0x20 << 10) | (0x5 << 7) | 0x33)
+#define FRV_INSTCODE_SLTI	((0x2 << 7) | 0x13) // Compares
 #define FRV_INSTCODE_SLTIU	((0x3 << 7) | 0x13)
+#define FRV_INSTCODE_SLT	((0x0 << 10) | (0x2 << 7) | 0x33)
+#define FRV_INSTCODE_SLTU	((0x0 << 10) | (0x3 << 7) | 0x33)
 #define FRV_INSTCODE_LB		((0x0 << 7) | 0x3) // Loads
 #define FRV_INSTCODE_LH		((0x1 << 7) | 0x3)
 #define FRV_INSTCODE_LW		((0x2 << 7) | 0x3)
@@ -36,6 +44,14 @@
 #define FRV_INSTCODE_SD		((0x3 << 7) | 0x23)
 #define FRV_INSTCODE_LUI	(0x37) // Upper immidiate
 #define FRV_INSTCODE_AUIPC	(0x17)
+#define FRV_INSTCODE_JAL	(0x6f) // Jumps
+#define FRV_INSTCODE_JALR	((0x0 << 7) | 0x67)
+#define FRV_INSTCODE_BEQ	((0x0 << 7) | 0x63) // Branch
+#define FRV_INSTCODE_BNE	((0x1 << 7) | 0x63)
+#define FRV_INSTCODE_BLT	((0x4 << 7) | 0x63)
+#define FRV_INSTCODE_BLTU	((0x6 << 7) | 0x63)
+#define FRV_INSTCODE_BGE	((0x5 << 7) | 0x63)
+#define FRV_INSTCODE_BGEU	((0x7 << 7) | 0x63)
 #define FRV_INSTCODE_CSRRW	((0x1 << 7) | 0x73) // Csrs
 #define FRV_INSTCODE_CSRRS	((0x2 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRC	((0x3 << 7) | 0x73)
@@ -101,6 +117,14 @@
 #define FRV_INST_IMM_I(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfff00000)) >> 20))
 #define FRV_INST_IMM_S(inst) (((uint64_t) ((int64_t)((int32_t)(inst & 0xfe000000)) >> 20)) | ((inst >> 7) & 0x1f))
 #define FRV_INST_IMM_U(inst) ((uint64_t) ((int64_t)((int32_t)(inst & 0xfffff000))))
+#define FRV_INST_IMM_J(inst) ((uint64_t)(((int64_t)((int32_t)(inst & 0x80000000))) >> 11)) \
+							   | (inst & 0xff000)		   \
+							   | ((inst >> 9) & 0x800)	   \
+							   | ((inst >> 20) & 0x7fe)
+#define FRV_INST_IMM_B(inst) ((uint64_t)(((int64_t)((int32_t)(inst & 0x80000000))) >> 19)) \
+							   | ((inst & 0x80) << 4)	   \
+							   | ((inst >> 20) & 0x7e0)	   \
+							   | ((inst >> 7) & 0x1e)
 #define FRV_INST_IMM_CSR(inst) ((uint64_t)((inst >> 15) & 0x1f))
 #define FRV_INST_SHAMT(inst) ((inst >> 20) & 0x3f)
 
