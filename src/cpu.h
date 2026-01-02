@@ -61,12 +61,27 @@
 #define FRV_INSTCODE_BLTU	((0x6 << 7) | 0x63)
 #define FRV_INSTCODE_BGE	((0x5 << 7) | 0x63)
 #define FRV_INSTCODE_BGEU	((0x7 << 7) | 0x63)
+#define FRV_INSTCODE_FENCE	((0x0 << 7) | 0x0f) //Fence
+#define FRV_INSTCODE_FENCEI	((0x1 << 7) | 0x0f)
 #define FRV_INSTCODE_CSRRW	((0x1 << 7) | 0x73) // Csrs
 #define FRV_INSTCODE_CSRRS	((0x2 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRC	((0x3 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRWI	((0x5 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRSI	((0x6 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRCI	((0x7 << 7) | 0x73)
+#define FRV_INSTCODE_MUL	((0x1 << 10) | (0x0 << 7) | 0x33)// M-extension
+#define FRV_INSTCODE_MULH	((0x1 << 10) | (0x1 << 7) | 0x33)
+#define FRV_INSTCODE_MULHU	((0x1 << 10) | (0x3 << 7) | 0x33)
+#define FRV_INSTCODE_MULHSU	((0x1 << 10) | (0x2 << 7) | 0x33)
+#define FRV_INSTCODE_MULW	((0x1 << 10) | (0x0 << 7) | 0x3b)
+#define FRV_INSTCODE_DIV	((0x1 << 10) | (0x4 << 7) | 0x33)
+#define FRV_INSTCODE_DIVU	((0x1 << 10) | (0x5 << 7) | 0x33)
+#define FRV_INSTCODE_DIVW	((0x1 << 10) | (0x4 << 7) | 0x3b)
+#define FRV_INSTCODE_DIVUW	((0x1 << 10) | (0x5 << 7) | 0x3b)
+#define FRV_INSTCODE_REM	((0x1 << 10) | (0x6 << 7) | 0x33)
+#define FRV_INSTCODE_REMU	((0x1 << 10) | (0x7 << 7) | 0x33)
+#define FRV_INSTCODE_REMW	((0x1 << 10) | (0x6 << 7) | 0x3b)
+#define FRV_INSTCODE_REMUW	((0x1 << 10) | (0x7 << 7) | 0x3b)
 
 // Machine-level CSRs
 /// Hardware thread ID

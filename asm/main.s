@@ -13,7 +13,7 @@ main:
 	sd	s0,0(sp)
 	addi	s0,sp,16
 	li	a0,10
-	call	fib
+	call	fact
 	mv	a5,a0
 	mv	a0,a5
 	ld	ra,8(sp)
@@ -22,49 +22,37 @@ main:
 	jr	ra
 	.size	main, .-main
 	.align	2
-	.globl	fib
-	.type	fib, @function
-fib:
-	addi	sp,sp,-48
-	sd	ra,40(sp)
-	sd	s0,32(sp)
-	sd	s1,24(sp)
-	addi	s0,sp,48
+	.globl	fact
+	.type	fact, @function
+fact:
+	addi	sp,sp,-32
+	sd	ra,24(sp)
+	sd	s0,16(sp)
+	addi	s0,sp,32
 	mv	a5,a0
-	sw	a5,-36(s0)
-	lw	a5,-36(s0)
-	sext.w	a5,a5
-	beq	a5,zero,.L4
-	lw	a5,-36(s0)
+	sw	a5,-20(s0)
+	lw	a5,-20(s0)
 	sext.w	a4,a5
 	li	a5,1
-	bne	a4,a5,.L5
+	bgt	a4,a5,.L4
+	li	a5,1
+	j	.L5
 .L4:
-	lw	a5,-36(s0)
-	j	.L6
-.L5:
-	lw	a5,-36(s0)
+	lw	a5,-20(s0)
 	addiw	a5,a5,-1
 	sext.w	a5,a5
 	mv	a0,a5
-	call	fib
+	call	fact
 	mv	a5,a0
-	mv	s1,a5
-	lw	a5,-36(s0)
-	addiw	a5,a5,-2
+	lw	a4,-20(s0)
+	mulw	a5,a4,a5
 	sext.w	a5,a5
+.L5:
 	mv	a0,a5
-	call	fib
-	mv	a5,a0
-	addw	a5,s1,a5
-	sext.w	a5,a5
-.L6:
-	mv	a0,a5
-	ld	ra,40(sp)
-	ld	s0,32(sp)
-	ld	s1,24(sp)
-	addi	sp,sp,48
+	ld	ra,24(sp)
+	ld	s0,16(sp)
+	addi	sp,sp,32
 	jr	ra
-	.size	fib, .-fib
+	.size	fact, .-fact
 	.ident	"GCC: (g1b306039ac) 15.1.0"
 	.section	.note.GNU-stack,"",@progbits

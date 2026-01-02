@@ -31,6 +31,7 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 		case 0x63:
 		case 0x67:
 		case 0x3:
+		case 0x0f: // Fence
 			return (funct3 << 7) | opcode;
 
 		case 0x1b: // RV64I
@@ -44,6 +45,49 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 		default:
 			return 0xFFFFFFFF;
 	}
+}
+
+static inline uint64_t frvMulhu(const uint64_t a, const uint64_t b)
+{
+	unsigned __int128 r = (unsigned __int128)a * (unsigned __int128)b;
+	return (uint64_t)(r >> 64);
+}
+
+static inline uint64_t frvMulh(const int64_t a, const int64_t b)
+{
+	__int128 r = (__int128)a * (__int128)b;
+	return (uint64_t)(r >> 64);
+}
+
+static inline uint64_t frvMulhsu(const int64_t a, const uint64_t b)
+{
+	__int128 r = (__int128)a * (unsigned __int128)b;
+	return (uint64_t)(r >> 64);
+}
+
+static inline uint64_t frvMulw(const uint64_t a, const uint64_t b)
+{
+	return (uint64_t)((int64_t)(int32_t)(((int32_t) a) * ((int32_t) b)));
+}
+
+static inline uint64_t frvDivw(const uint64_t a, const uint64_t b)
+{
+	return (b) ? ((uint64_t)((int64_t)(int32_t)(((int32_t) a) / ((int32_t) b)))) : -1;
+}
+
+static inline uint64_t frvDivuw(const uint64_t a, const uint64_t b)
+{
+	return (b) ? ((uint64_t)((int64_t)((int32_t)(((uint32_t) a) / ((uint32_t) b))))) : -1;
+}
+
+static inline uint64_t frvRemw(const uint64_t a, const uint64_t b)
+{
+	return (b) ? ((uint64_t)((int64_t)((int32_t)(((int32_t) a) % ((int32_t) b))))) : a;
+}
+
+static inline uint64_t frvRemuw(const uint64_t a, const uint64_t b)
+{
+	return (b) ? ((uint64_t)((int64_t)((int32_t)(((uint32_t) a) % ((uint32_t) b))))) : a;
 }
 
 static uint64_t frvLoadCsr(const struct FrvCPU* const cpu, const uint32_t addr) 
@@ -474,6 +518,78 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		frvStoreCsr(cpu, csr, (~rs1) & cpu->regs[rd]); // Rs1 is the same as imm here
 		return true;
 	}
+
+	// M-extension
+	case FRV_INSTCODE_MUL: {
+		cpu->regs[rd] = (int64_t)cpu->regs[rs1] * (int64_t)cpu->regs[rs2];
+		return true;
+        }
+
+	case FRV_INSTCODE_MULH: {
+		cpu->regs[rd] = frvMulh((int64_t)cpu->regs[rs1], (int64_t)cpu->regs[rs2]);
+		return true;
+        }
+
+	case FRV_INSTCODE_MULHU: {
+		cpu->regs[rd] = frvMulhu(cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+        }
+
+	case FRV_INSTCODE_MULHSU: {
+		cpu->regs[rd] = frvMulhsu((int64_t)cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+        }
+
+	case FRV_INSTCODE_MULW: {
+		cpu->regs[rd] = frvMulw(cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+	}
+
+	case FRV_INSTCODE_DIV: {
+		cpu->regs[rd] = (cpu->regs[rs2]) ? (((int64_t)cpu->regs[rs1]) / ((int64_t)cpu->regs[rs2])) :
+				-1;
+		return true;
+	}
+
+	case FRV_INSTCODE_DIVU: {
+		cpu->regs[rd] = (cpu->regs[rs2]) ? (cpu->regs[rs1] / cpu->regs[rs2]) : UINT64_MAX;
+		return true;
+	}
+
+	case FRV_INSTCODE_DIVW: {
+		cpu->regs[rd] = frvDivw(cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+	}
+
+	case FRV_INSTCODE_DIVUW: {
+		cpu->regs[rd] = frvDivuw(cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+	}
+
+	case FRV_INSTCODE_REM: {
+		cpu->regs[rd] = (cpu->regs[rs2]) ? (((int64_t)cpu->regs[rs1]) % ((int64_t)cpu->regs[rs2])) :
+				cpu->regs[rs1];
+		return true;
+	}
+
+	case FRV_INSTCODE_REMU: {
+		cpu->regs[rd] = (cpu->regs[rs2]) ? (cpu->regs[rs1] % cpu->regs[rs2]) : cpu->regs[rs1];
+		return true;
+	}
+
+	case FRV_INSTCODE_REMW: {
+		cpu->regs[rd] = frvRemw(cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+	}
+
+	case FRV_INSTCODE_REMUW: {
+		cpu->regs[rd] = frvRemuw(cpu->regs[rs1], cpu->regs[rs2]);
+		return true;
+	}
+
+	case FRV_INSTCODE_FENCE: // Not usefull on a single-threaded simulator
+	case FRV_INSTCODE_FENCEI:
+		return true;
 
 	default:
 		return false;

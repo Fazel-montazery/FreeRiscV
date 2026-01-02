@@ -1,14 +1,12 @@
-int fib(int n);
+int fact(int n);
 
 int main() 
 {
-	return fib(10);
+	return fact(10);
 }
 
-int fib(int n) 
+int fact(int n) 
 {
-	if (n == 0 || n == 1)
-		return n;
-	else
-		return (fib(n - 1) + fib(n - 2));
+	if (n <= 1) return 1;
+	return fact(n - 1) * n;
 }
