@@ -7,6 +7,7 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 	const uint32_t funct3 = FRV_INST_FUNCT3(inst);
 	const uint32_t funct6 = FRV_INST_FUNCT6(inst);
 	const uint32_t funct7 = FRV_INST_FUNCT7(inst);
+	const uint32_t funct12 = FRV_INST_FUNCT12(inst);
 	switch (opcode) {
 		case 0x33: // R-type
 		case 0x3b: // RV64I
@@ -26,8 +27,15 @@ static uint32_t frvCpuInstCode(const uint32_t inst)
 		case 0x6f:
 			return opcode;
 
+		case 0x73: // CSR, ECALL
+			switch (funct3) {
+			case 0:
+				return (funct12 << 10) | (funct3 << 7) | opcode;
+			default:
+				return (funct3 << 7) | opcode;
+			}
+
 		case 0x23: // S-type, B-type, I-type(Load), J-type, CSR
-		case 0x73:
 		case 0x63:
 		case 0x67:
 		case 0x3:
@@ -481,6 +489,11 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 		}
 		return true;
         }
+
+	// ECALL
+	case FRV_INSTCODE_ECALL: {
+		return frvEcallExec(cpu->regs[FRV_ABI_REG_A0], cpu->regs[FRV_ABI_REG_A1]);
+	}
 
 	// CSRs
 	case FRV_INSTCODE_CSRRW: {

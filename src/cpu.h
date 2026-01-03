@@ -7,11 +7,33 @@
 #include "fs.h"
 
 #include "bus.h"
+#include "env.h"
 
 #define FRV_NUM_REGS 32
 #define FRV_NUM_CSRS 4096
 
-// RV32I (func7 + func3 + opcode)
+// ABI regs to machine regs
+enum FrvRegsAbi {
+	FRV_ABI_REG_ZERO = 0, // Always zero
+	FRV_ABI_REG_RA, // Return Address
+	FRV_ABI_REG_SP, // Stack pointer
+	FRV_ABI_REG_GP, // Global pointer
+	FRV_ABI_REG_TP, // Thread pointer
+	FRV_ABI_REG_T0, // Temp link register
+	FRV_ABI_REG_T1, FRV_ABI_REG_T2, // Temps
+	FRV_ABI_REG_FP, // Frame pointer
+	FRV_ABI_REG_S1, // Saved register
+	FRV_ABI_REG_A0, FRV_ABI_REG_A1, // Function args/rets
+	FRV_ABI_REG_A2, FRV_ABI_REG_A3, // Function args
+	FRV_ABI_REG_A4, FRV_ABI_REG_A5, FRV_ABI_REG_A6, FRV_ABI_REG_A7,
+	FRV_ABI_REG_S2, FRV_ABI_REG_S3,// Saved registers
+	FRV_ABI_REG_S4, FRV_ABI_REG_S5, FRV_ABI_REG_S6, FRV_ABI_REG_S7,
+	FRV_ABI_REG_S8, FRV_ABI_REG_S9, FRV_ABI_REG_S10, FRV_ABI_REG_S11,
+	FRV_ABI_REG_T3, FRV_ABI_REG_T4, // Temps
+	FRV_ABI_REG_T5, FRV_ABI_REG_T6,
+};
+
+// RV32I ((func7 or func6 or func12) + func3 + opcode)
 #define FRV_INSTCODE_ADD	((0x00 << 10) | (0x0 << 7) | 0x33) // Arithmetic
 #define FRV_INSTCODE_SUB	((0x20 << 10) | (0x0 << 7) | 0x33)
 #define FRV_INSTCODE_ADDI	((0x0 << 7) | 0x13)
@@ -63,6 +85,7 @@
 #define FRV_INSTCODE_BGEU	((0x7 << 7) | 0x63)
 #define FRV_INSTCODE_FENCE	((0x0 << 7) | 0x0f) //Fence
 #define FRV_INSTCODE_FENCEI	((0x1 << 7) | 0x0f)
+#define FRV_INSTCODE_ECALL	((0x0 << 10)| (0x0 << 7) | 0x73) // Env
 #define FRV_INSTCODE_CSRRW	((0x1 << 7) | 0x73) // Csrs
 #define FRV_INSTCODE_CSRRS	((0x2 << 7) | 0x73)
 #define FRV_INSTCODE_CSRRC	((0x3 << 7) | 0x73)
@@ -135,6 +158,7 @@
 #define FRV_INST_FUNCT3(inst) ((inst >> 12) & 0x7)
 #define FRV_INST_FUNCT7(inst) ((inst >> 25) & 0x7f)
 #define FRV_INST_FUNCT6(inst) ((inst >> 26) & 0x3f)
+#define FRV_INST_FUNCT12(inst) ((inst >> 20) & 0xfff)
 #define FRV_INST_RD(inst) ((size_t) ((inst >> 7) & 0x1f))
 #define FRV_INST_RS1(inst) ((size_t) ((inst >> 15) & 0x1f))
 #define FRV_INST_RS2(inst) ((size_t) ((inst >> 20) & 0x1f))

@@ -25,8 +25,8 @@ int main(int argc, char** argv)
 	struct FrvCPU cpu = frvNewCpu(&bus);
 	if (!frvCpuLoadProgram(&cpu, argv[1])) return -1;
 	frvCpuRun(&cpu);
-	frvCpuPrintRegs(&cpu);
-	frvCpuPrintCsrs(&cpu);
+	// frvCpuPrintRegs(&cpu); // for debug
+	// frvCpuPrintCsrs(&cpu);
 
 	frvRamDestroy(&ram);
 	return 0;
