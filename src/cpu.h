@@ -7,7 +7,6 @@
 #include "fs.h"
 
 #include "bus.h"
-#include "env.h"
 
 #define FRV_NUM_REGS 32
 #define FRV_NUM_CSRS 4096

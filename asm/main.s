@@ -1,7 +1,19 @@
+.data
+a: .string "a\n"
+b: .string "b\n"
+c: .string "c\n"
+
+.text
 main:
-	addi t0, zero, 10
-	addi t1, zero, 12
-	mul t2, t0, t1
-	addi a0, zero, 0
-	add a1, zero, t2
+1:
+auipc gp, %pcrel_hi(__global_pointer$)
+addi  gp, gp, %pcrel_lo(1b)
+	li a0, 1
+	la a1, a
+	ecall
+
+	la a1, b
+	ecall
+
+	la a1, c
 	ecall

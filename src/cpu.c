@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "env.h"
 
 // Create a unique cose for each instruction
 static uint32_t frvCpuInstCode(const uint32_t inst)
@@ -149,8 +150,8 @@ void frvCpuPrintCsrs(const struct FrvCPU* const cpu)
 struct FrvCPU frvNewCpu(struct FrvBUS* bus)
 {
 	struct FrvCPU cpu = { 0 };
-	cpu.regs[0] = 0; // x0 hard wired to zero
-	cpu.regs[2] = bus->ram->size + FRV_RAM_BASE_ADDR; // x2 stack pointer
+	cpu.regs[FRV_ABI_REG_ZERO] = 0; // x0 hard wired to zero
+	cpu.regs[FRV_ABI_REG_SP] = bus->ram->size + FRV_RAM_BASE_ADDR; // x2 stack pointer
 	cpu.pc = FRV_RAM_BASE_ADDR; // Program-couter
 	cpu.bus = bus;
 	return cpu;
@@ -492,7 +493,7 @@ static bool frvCpuExec(struct FrvCPU* cpu, uint32_t inst)
 
 	// ECALL
 	case FRV_INSTCODE_ECALL: {
-		return frvEcallExec(cpu->regs[FRV_ABI_REG_A0], cpu->regs[FRV_ABI_REG_A1]);
+		return frvEcallExec(cpu);
 	}
 
 	// CSRs
