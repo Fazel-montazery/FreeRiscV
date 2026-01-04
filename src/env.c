@@ -6,7 +6,7 @@ bool frvEcallExec(struct FrvCPU* cpu)
 	const uint64_t in = cpu->regs[FRV_ABI_REG_A1];
 	switch (ecall) {
 		case FRV_ECALL_PRINT_D: {
-			printf("%ld\n", (int64_t)in);
+			printf("%ld", (int64_t)in);
 			return true;
 		}
 
@@ -24,12 +24,11 @@ bool frvEcallExec(struct FrvCPU* cpu)
 
 		case FRV_ECALL_PRINT_C: {
 			putchar((char)in);
-			putchar('\n');
 			return true;
 		}
 
 		case FRV_ECALL_PRINT_X: {
-			printf("%lX\n", in);
+			printf("%lX", in);
 			return true;
 		}
 

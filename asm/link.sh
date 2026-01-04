@@ -1,6 +1,6 @@
 awk '{
   print
-  if(!done && $0 ~ /^main:([[:space:]]*$|[[:space:]]+)/) {
+  if(!done && $0 ~ /\.text/) {
     print "1:"
     print "auipc gp, %pcrel_hi(__global_pointer$)"
     print "addi  gp, gp, %pcrel_lo(1b)"
