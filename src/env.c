@@ -32,6 +32,11 @@ bool frvEcallExec(struct FrvCPU* cpu)
 			return true;
 		}
 
+		case FRV_ECALL_SCAN_D: {
+			scanf("%ld", &cpu->regs[FRV_ABI_REG_A1]);
+			return true;
+	        }
+
 		case FRV_ECALL_SCAN_S: {
 			const uint64_t bufsiz = cpu->regs[FRV_ABI_REG_A2];
 			int c;
@@ -44,7 +49,12 @@ bool frvEcallExec(struct FrvCPU* cpu)
 			if (c != '\n' && c != EOF)
 				while ((c = getchar()) != EOF && c != '\n') {}
 			return true;
-	       }
+	        }
+
+		case FRV_ECALL_SCAN_C: {
+			cpu->regs[FRV_ABI_REG_A1] = getchar();
+			return true;
+	        }
 
 		case FRV_ECALL_END: {
 			return false;
